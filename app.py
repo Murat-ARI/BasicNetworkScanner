@@ -26,6 +26,74 @@ st.markdown("""
 
 st.title("Basic Network Scanner")
 
+# Servis açıklamaları sözlüğü
+SERVICE_DESCRIPTIONS = {
+    20: 'FTP veri aktarımı (şifreleme içermez).',
+    21: 'FTP kontrol bağlantısı (şifreleme içermez).',
+    22: 'SSH - Güvenli uzaktan bağlantı.',
+    23: 'Telnet - Güvensiz uzaktan bağlantı.',
+    25: 'SMTP - E-posta gönderimi.',
+    53: 'DNS - Alan adı çözümleme.',
+    67: 'DHCP - Sunucu tarafı IP dağıtımı.',
+    68: 'DHCP - İstemci tarafı IP alımı.',
+    69: 'TFTP - Basit ve güvensiz dosya aktarımı.',
+    80: 'HTTP - Şifrelenmemiş web trafiği.',
+    88: 'Kerberos - Kimlik doğrulama.',
+    106: "Alternatif SMTP kimlik doğrulamalı e-posta gönderim portu",
+    110: 'POP3 - E-postaları alma.',
+    111: 'RPC - Uzak işlem çağrısı.',
+    123: 'NTP - Ağ zamanı eşitleme.',
+    135: 'Microsoft RPC - Uzak prosedür çağrısı.',
+    139: 'NetBIOS - Dosya ve yazıcı paylaşımı.',
+    143: 'IMAP - E-posta yönetimi.',
+    161: 'SNMP - Ağ cihaz yönetimi.',
+    162: 'SNMP Trap - Ağ cihaz bildirimi.',
+    389: 'LDAP - Dizin hizmeti.',
+    443: 'HTTPS - Güvenli web trafiği.',
+    445: 'SMB - Dosya paylaşımı (Windows).',
+    465: 'SMTPS - Güvenli e-posta gönderimi.',
+    514: 'Syslog - Log toplama ve bildirimi.',
+    587: 'SMTP - E-posta gönderimi (TLS destekli).',
+    631: 'IPP - Ağ üzerinden yazdırma.',
+    993: 'IMAPS - Güvenli IMAP erişimi.',
+    995: 'POP3S - Güvenli POP3 erişimi.',
+    1433: 'MSSQL - Microsoft SQL Server.',
+    1521: 'Oracle - Oracle veritabanı erişimi.',
+    1723: 'PPTP - VPN bağlantısı.',
+    2375: 'Docker - Güvensiz API erişimi.',
+    2376: 'Docker - TLS ile güvenli API.',
+    27017: 'MongoDB - NoSQL veritabanı.',
+    3000: 'Grafana - Gözlemleme arayüzü.',
+    3306: 'MySQL - Veritabanı sunucusu.',
+    3389: 'RDP - Uzak masaüstü bağlantısı.',
+    5432: 'PostgreSQL - Veritabanı sunucusu.',
+    5800: 'VNC web arayüzü.',
+    5900: 'VNC - Uzak grafik masaüstü.',
+    5901: 'VNC - Alternatif bağlantı.',
+    5902: 'VNC - Alternatif bağlantı.',
+    5984: 'CouchDB - REST tabanlı NoSQL veritabanı.',
+    5985: 'WinRM - Windows uzaktan yönetimi.',
+    5986: 'WinRM - TLS ile güvenli yönetim.',
+    6379: 'Redis - Anahtar-değer önbellekleme sistemi.',
+    6443: 'Kubernetes API sunucusu.',
+    8000: 'HTTP alternatifi (test/geliştirme).',
+    8080: 'HTTP alternatifi (test/geliştirme).',
+    8443: 'HTTPS alternatifi (test/geliştirme).',
+    8888: 'Jupyter / HTTP alternatif servisi.',
+    9200: 'Elasticsearch - Veri arama ve indeksleme.',
+    9999: 'Genel test / özel servis portu.',
+    8009: 'AJP - Apache JServ Protocol (Tomcat bağlantısı için kullanılır).',
+    49152: 'Dinamik/Geçici port aralığı başlangıcı (Windows RPC Dynamic).',
+    49153: 'Windows RPC Dynamic portu.',
+    49154: 'Windows RPC Dynamic portu.',
+    49155: 'Windows RPC Dynamic portu.',
+    49156: 'Windows RPC Dynamic portu.',
+    49157: 'Windows RPC Dynamic portu.',
+    
+}
+
+
+
 # Hızlı ağ tarama fonksiyonu (tek seferde, hızlı parametrelerle)
 def fast_scan_network(target, timing):
     nm = nmap.PortScanner()
@@ -59,11 +127,15 @@ def fast_scan_network(target, timing):
         for proto in nm[host].all_protocols():
             for port in nm[host][proto].keys():
                 port_info = nm[host][proto][port]
+                service_name = port_info.get('name', '')
+                # Hem port numarası hem de servis adı ile açıklama bul
+                service_desc = SERVICE_DESCRIPTIONS.get(port, SERVICE_DESCRIPTIONS.get(service_name, 'Açıklama yok.'))
                 host_info['ports'].append({
                     'port': port,
                     'state': port_info['state'],
-                    'name': port_info.get('name', ''),
-                    'protocol': proto.upper()
+                    'name': service_name,
+                    'protocol': proto.upper(),
+                    'desc': service_desc
                 })
         results.append(host_info)
         progress.progress((idx+1)/total, text=f"{device_name} işlendi ({idx+1}/{total})")
@@ -131,8 +203,8 @@ if results is not None:
                 st.markdown("**Açık Portlar:**")
                 if device['ports']:
                     df = pd.DataFrame(device['ports'])
-                    df = df[['port', 'protocol', 'state', 'name']]
-                    df.columns = ['Port', 'Protokol', 'Durum', 'Servis']
+                    df = df[['port', 'protocol', 'state', 'name', 'desc']]
+                    df.columns = ['Port', 'Protokol', 'Durum', 'Servis', 'Servis Açıklaması']
                     st.dataframe(df, use_container_width=True)
                 else:
                     st.info("Açık port bulunamadı.")
